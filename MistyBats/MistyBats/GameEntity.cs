@@ -17,6 +17,7 @@ namespace MistyBats
         public Vector2 Velocity;
         public Texture2D Sprite;
 
+
         public virtual void LoadContent() {}        
         public virtual void Update(GameTime gameTime) {}
         public virtual void Draw(GameTime gameTime) { }

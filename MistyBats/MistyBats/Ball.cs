@@ -14,14 +14,15 @@ namespace MistyBats
 {
     public class Ball:GameEntity
     {
-     
+        float maxVelocity = 1000;
         public void Reset()
         {
             float speed = 200.0f;
-            Random r = new Random();
-            Velocity.X = (float)r.NextDouble() - 0.5f;
+            Random r = new Random(DateTime.Now.Millisecond);
+
+            
             Velocity.Y = (float)r.NextDouble() - 0.5f;
-            Velocity.Normalize();
+            Velocity.X = r.Next() % 2 == 0 ? -1 : 1;
             Velocity *= speed;
 
             Rectangle screenBounds = Game1.Instance.ScreenBounds;
@@ -41,7 +42,7 @@ namespace MistyBats
         public override void Update(GameTime gameTime)
         {
             float timeDelta = (float) gameTime.ElapsedGameTime.TotalSeconds;
-            Position += Velocity * timeDelta;
+            
 
             // Now check to see if we hit the top or the bottom
             if (Position.Y < 0)
@@ -83,11 +84,22 @@ namespace MistyBats
                 Velocity += Game1.Instance.RightBat.Velocity;
                 Game1.Instance.Bark();
             }
+
+            if (Velocity.Y > maxVelocity)
+            {
+                Velocity.Y = maxVelocity;
+            }
+            if (Velocity.Y < -maxVelocity)
+            {
+                Velocity.Y = -maxVelocity;
+            }
+            Position += Velocity * timeDelta;
+
         }
 
         public override void Draw(GameTime gameTime)
         {
-            Game1.Instance.SpriteBatch.Draw(Sprite, Position, Color.White);
+            Game1.Instance.SpriteBatch.Draw(Sprite, Position, Game1.Instance.TextColour);
         }
     }
 }

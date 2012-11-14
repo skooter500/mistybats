@@ -13,48 +13,78 @@ namespace MistyBats
 {
     public class Bat:GameEntity
     {
+        Boolean aiControlled;
+        Boolean mouseControlled;
+
+        public Boolean MouseControlled
+        {
+            get { return mouseControlled; }
+            set { mouseControlled = value; }
+        }
+
+        public Boolean AiControlled
+        {
+            get { return aiControlled; }
+            set { aiControlled = value; }
+        }
         Keys upKey;
         Keys downKey;
 
         float speed = 500.0f;
 
-        public Bat(Keys upKey, Keys downKey, Vector2 startPos)
+        public Bat(Keys upKey, Keys downKey)
         {
-            Position = startPos;
             this.upKey = upKey;
             this.downKey = downKey;
+         
         }
 
         public override void LoadContent()
         {
-            Sprite = Game1.Instance.Content.Load<Texture2D>("Bone");
+            Sprite = Game1.Instance.Content.Load<Texture2D>("bat");
             base.LoadContent();
         }
 
         public override void Update(GameTime gameTime)
         {
-            base.Update(gameTime);
-            KeyboardState state = Keyboard.GetState();
-            float timeDelta = (float) gameTime.ElapsedGameTime.TotalSeconds;
+            float timeDelta = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            KeyboardState keyState = Keyboard.GetState();
+            MouseState mouseState = Mouse.GetState();
+            
 
-            Velocity.Y = 0;
-            if ((Position.Y > 10) && (state.IsKeyDown(upKey)))
-            {
-                Velocity.Y = -speed;
-            }
             float bottom = (Game1.Instance.ScreenBounds.Height - Sprite.Height) - 10;
-            if ((Position.Y < bottom) && (state.IsKeyDown(downKey)))
+            if (aiControlled)
             {
-                Velocity.Y = speed;
+                Velocity.Y = Game1.Instance.Ball.Position.Y - Position.Y;
+                Velocity.Y *= 50;
+            }
+            else if (mouseControlled)
+            {
+                Velocity.Y = mouseState.Y - (Game1.Instance.ScreenBounds.Height / 2);
+                Velocity.Y *= 50;
+                Game1.Instance.ResetMouse();
+            }
+            else
+            {
+                Velocity.Y = 0;
+                if ((Position.Y > 10) && (keyState.IsKeyDown(upKey)))
+                {
+                    Velocity.Y = -speed;
+                }
+
+                if ((Position.Y < bottom) && (keyState.IsKeyDown(downKey)))
+                {
+                    Velocity.Y = speed;
+                }
             }
 
             Position += Velocity * timeDelta;
-            
+            base.Update(gameTime);
         }
 
         public override void Draw(GameTime gameTime)
         {
-            Game1.Instance.SpriteBatch.Draw(Sprite, Position, Color.White);
+            Game1.Instance.SpriteBatch.Draw(Sprite, Position, Game1.Instance.TextColour);
         }
     }
 }

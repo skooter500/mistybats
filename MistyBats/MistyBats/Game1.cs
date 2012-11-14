@@ -16,12 +16,22 @@ namespace MistyBats
     /// </summary>
     public class Game1 : Microsoft.Xna.Framework.Game
     {
+        private Color textColour;
+        private Color highlightColour;
+        Song startSong;
+
+        public Color TextColour
+        {
+            get { return textColour; }
+            set { textColour = value; }
+        }
+
         enum GAMESTATE
         {
             START, MIDDLE, END
         }
 
-        GAMESTATE state;
+        GAMESTATE gameState;
 
         private Rectangle screenBounds;
 
@@ -54,11 +64,17 @@ namespace MistyBats
             set { children = value; }
         }
 
+        string[] menuOptions = {"One Player", "Two Players", "Quit"};
         SoundEffect[] barks = new SoundEffect[10];
+        SoundEffect winSound;
 
-        Texture2D background;
+        Texture2D gameBackground;
+        Texture2D endBackground;
+        Texture2D startBackground;
+        Texture2D cursor;
 
         Ball ball;
+        int highlighted = -1;
 
         public Ball Ball
         {
@@ -80,7 +96,6 @@ namespace MistyBats
             set { rightBat = value; }
         }
 
-
         int maxScore = 5;
         int leftScore = 0;
         int rightScore = 0;
@@ -92,14 +107,32 @@ namespace MistyBats
 
         public void LeftBatScores()
         {
+            winSound.Play();
             leftScore++;
-            ResetGame();
+            if (leftScore == maxScore)
+            {
+                gameState = GAMESTATE.END;
+                MediaPlayer.Play(startSong);
+            }
+            else
+            {
+                ResetGame();
+            }
         }
 
         public void RightBatScores()
         {
+            winSound.Play();
             rightScore++;
-            ResetGame();
+            if (rightScore == maxScore)
+            {
+                gameState = GAMESTATE.END;
+                MediaPlayer.Play(startSong);
+            }
+            else
+            {
+                ResetGame();
+            }
         }
 
         SpriteFont spriteFont;
@@ -120,13 +153,18 @@ namespace MistyBats
         protected override void Initialize()
         {
             // TODO: Add your initialization logic here
-            graphics.PreferredBackBufferWidth = 800;
-            graphics.PreferredBackBufferHeight = 600;
+            graphics.PreferredBackBufferWidth = 1024;
+            graphics.PreferredBackBufferHeight = 768;
             graphics.ApplyChanges();
 
             screenBounds = GraphicsDevice.Viewport.Bounds;
 
+            textColour = Color.Cornsilk;
+            highlightColour = Color.Red;
+
             base.Initialize();
+
+            gameState = GAMESTATE.START;
 
             //graphics.ToggleFullScreen();
 
@@ -140,17 +178,22 @@ namespace MistyBats
         {
             // Create a new SpriteBatch, which can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
-            background = Content.Load<Texture2D>("Misty");
+            gameBackground = Content.Load<Texture2D>("Misty");
+            startBackground = Content.Load<Texture2D>("splash");
+            endBackground = Content.Load<Texture2D>("endgame");
 
-            // the left bat
-            Vector2 leftStartPos = new Vector2(10, (screenBounds.Height / 2) - 52);
-            leftBat = new Bat(Keys.Q, Keys.A, leftStartPos);
+            // the left bat            
+            leftBat = new Bat(Keys.Q, Keys.A);
             leftBat.LoadContent();
+            Vector2 leftStartPos = new Vector2(10, (screenBounds.Height / 2) - leftBat.Sprite.Height / 2);
+            leftBat.Position = leftStartPos;
             children.Add(leftBat);
 
-            Vector2 rightStartPos = new Vector2(screenBounds.Width - 57, (screenBounds.Height / 2) - 52);
-            rightBat = new Bat(Keys.P, Keys.L, rightStartPos);
+            
+            rightBat = new Bat(Keys.P, Keys.L);
             rightBat.LoadContent();
+            Vector2 rightStartPos = new Vector2((screenBounds.Width - rightBat.Sprite.Width) - 10, (screenBounds.Height / 2) - rightBat.Sprite.Height / 2);
+            rightBat.Position = rightStartPos;
             children.Add(rightBat);
 
 
@@ -159,11 +202,18 @@ namespace MistyBats
             children.Add(ball);
 
             spriteFont = Content.Load<SpriteFont>("SpriteFont1");
+            cursor = Content.Load<Texture2D>("Cursor");
 
             for (int i = 0; i < 10; i++)
             {
                 barks[i] = Content.Load<SoundEffect>("Bark" + i);
             }
+
+            winSound = Content.Load<SoundEffect>("3Barks");
+
+            startSong = Content.Load<Song>("droidmarch");
+            MediaPlayer.Play(startSong);
+
             // TODO: use this.Content to load your game content here
         }
 
@@ -171,6 +221,13 @@ namespace MistyBats
         {
             int which = (int) (new Random().NextDouble() * 9);
             barks[which].Play();
+        }
+
+        public void ResetMouse()
+        {
+            int midX = ScreenBounds.Width / 2;
+            int midY = ScreenBounds.Height / 2;
+            Mouse.SetPosition(midX, midY);
         }
 
         /// <summary>
@@ -189,17 +246,77 @@ namespace MistyBats
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
+            KeyboardState keyState = Keyboard.GetState();
+            MouseState mouseState = Mouse.GetState();
+            switch (gameState)
+            {
+                case GAMESTATE.START:
+                {
+                    int startAt = 200;
+                    int border = 20;
+                    highlighted = -1;
+                    for (int i = 0; i < menuOptions.Count(); i++)
+                    {
+                        Vector2 textSize = spriteFont.MeasureString(menuOptions[0]);
+                        Vector2 pos = new Vector2(50, startAt + ((textSize.Y + border) * i));
+                        Rectangle textBounds = new Rectangle((int)pos.X, (int)pos.Y, (int)textSize.X, (int) textSize.Y);
+                        Vector2 mousePos = new Vector2(mouseState.X, mouseState.Y);
+                        if ((mousePos.X > textBounds.X) && (mousePos.X < textBounds.X + textBounds.Width)
+                            && (mousePos.Y > textBounds.Y) && (mousePos.Y < textBounds.Y + textBounds.Height))
+                        {
+                            highlighted = i;
+                        }
+                    }
+
+                    if (mouseState.LeftButton == ButtonState.Pressed)
+                    {
+                        if (highlighted == 0)
+                        {
+                            leftScore = 0;
+                            rightScore = 0;
+                            rightBat.AiControlled = true;
+                            leftBat.MouseControlled = true;
+                            gameState = GAMESTATE.MIDDLE;
+                            MediaPlayer.Stop();
+                            ResetMouse();
+                        }
+                        if (highlighted == 1)
+                        {
+                            gameState = GAMESTATE.MIDDLE;
+                            MediaPlayer.Stop();
+                            ResetMouse();
+                        }
+                        if (highlighted == 2)
+                        {
+                            this.Exit();
+                        }
+                    }
+
+                    break;
+                }
+                case GAMESTATE.MIDDLE:
+                {             
+                    for (int i = 0; i < children.Count; i++)
+                    {
+                        children[i].Update(gameTime);
+                    }
+                    break;
+                }
+                case GAMESTATE.END:
+                {
+                    if (mouseState.LeftButton == ButtonState.Pressed)
+                    {
+                        gameState = GAMESTATE.START;
+                    }
+                    break;
+                }
+            }
+
             if (Keyboard.GetState().IsKeyDown(Keys.Escape))
             {
                 this.Exit();
             }
 
-
-            for (int i = 0; i < children.Count; i++)
-            {
-                children[i].Update(gameTime);
-            }
-            
             base.Update(gameTime);
         }
 
@@ -209,29 +326,70 @@ namespace MistyBats
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
+            GraphicsDevice.Clear(Color.Black);
 
             spriteBatch.Begin();
-
-            
-            float scale = (float) screenBounds.Height / (float) background.Bounds.Height;
-            //spriteBatch.Draw(background, Vector2.Zero, null, Color.White, 0, Vector2.Zero, scale , SpriteEffects.None, 0);
-            spriteBatch.Draw(background, screenBounds, background.Bounds, Color.White);
-            for (int i = 0; i < children.Count; i++)
+            KeyboardState keyState = Keyboard.GetState();
+            MouseState mouseState = Mouse.GetState();
+            switch (gameState)
             {
-                children[i].Draw(gameTime);
+                case GAMESTATE.START:
+                {
+                    spriteBatch.Draw(startBackground, screenBounds, startBackground.Bounds, Color.White);
+                    Vector2 textSize = spriteFont.MeasureString("Hello");
+                    int startAt = 200;
+                    int border = 20;
+                    CentreText("Misty Bats!!!", 5, Color.Black);
+                    for (int i = 0; i < menuOptions.Count(); i++)
+                    {
+                        Vector2 pos = new Vector2(50, startAt + ((textSize.Y + border) * i));
+                        if (i == highlighted)
+                        {
+                            spriteBatch.DrawString(spriteFont, menuOptions[i], pos, highlightColour);
+                        }
+                        else
+                        {
+                            spriteBatch.DrawString(spriteFont, menuOptions[i], pos, textColour);
+                        }
+
+                        spriteBatch.Draw(cursor, new Vector2(mouseState.X, mouseState.Y), Color.White);
+                    }
+                    break;
+                }
+                case GAMESTATE.MIDDLE:
+                {
+                    spriteBatch.Draw(gameBackground, screenBounds, gameBackground.Bounds, Color.White);
+                    for (int i = 0; i < children.Count; i++)
+                    {
+                        children[i].Draw(gameTime);
+                    }
+                    int midX = screenBounds.Width / 2;
+                    spriteBatch.DrawString(spriteFont, "" + leftScore, new Vector2(midX - 100, 20), textColour);
+                    spriteBatch.DrawString(spriteFont, "" + rightScore, new Vector2(midX + 100, 20), textColour);
+                    
+                    break;
+                }
+                case GAMESTATE.END:
+                {
+                    spriteBatch.Draw(endBackground, screenBounds, endBackground.Bounds, Color.White);
+
+                    CentreText("Game Over!", 150, Color.Yellow);
+                    CentreText("Score: " + leftScore + " to " + rightScore, 250, Color.Yellow);
+                    string winner = "Misty loves the " + ((leftScore > rightScore) ? "left" : "right") + " bat";
+                    CentreText(winner, 350, Color.Yellow);
+                    spriteBatch.Draw(cursor, new Vector2(mouseState.X, mouseState.Y), Color.Yellow);
+                    break;
+                }
             }
-
-
-            int midX = screenBounds.Width / 2;
-            spriteBatch.DrawString(spriteFont, "" + leftScore, new Vector2(midX - 100, 20), Color.Red);
-            spriteBatch.DrawString(spriteFont, "" + rightScore, new Vector2(midX + 100, 20), Color.Red);
-
-            spriteBatch.End();
-
-            // TODO: Add your drawing code here
-
+            spriteBatch.End();            
             base.Draw(gameTime);
+        }
+
+        public void CentreText(string text, float y, Color color)
+        {
+            Vector2 textSize = spriteFont.MeasureString(text);
+            int midX = screenBounds.Width / 2;
+            spriteBatch.DrawString(spriteFont, text, new Vector2(midX - (textSize.X / 2), y), color);
         }
     }
 }
