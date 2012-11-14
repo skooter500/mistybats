@@ -16,6 +16,13 @@ namespace MistyBats
     /// </summary>
     public class Game1 : Microsoft.Xna.Framework.Game
     {
+        enum GAMESTATE
+        {
+            START, MIDDLE, END
+        }
+
+        GAMESTATE state;
+
         private Rectangle screenBounds;
 
         public Rectangle ScreenBounds
@@ -39,10 +46,64 @@ namespace MistyBats
             get { return spriteBatch; }
             set { spriteBatch = value; }
         }
-        Texture2D background;
-        public LeftBat leftBat;
-        public RightBat rightBat;
+        private List<GameEntity> children = new List<GameEntity>();
 
+        public List<GameEntity> Children
+        {
+            get { return children; }
+            set { children = value; }
+        }
+
+        SoundEffect[] barks = new SoundEffect[10];
+
+        Texture2D background;
+
+        Ball ball;
+
+        public Ball Ball
+        {
+            get { return ball; }
+            set { ball = value; }
+        }
+        Bat leftBat;
+
+        public Bat LeftBat
+        {
+            get { return leftBat; }
+            set { leftBat = value; }
+        }
+        Bat rightBat;
+
+        public Bat RightBat
+        {
+            get { return rightBat; }
+            set { rightBat = value; }
+        }
+
+
+        int maxScore = 5;
+        int leftScore = 0;
+        int rightScore = 0;
+
+        public void ResetGame()
+        {
+            ball.Reset();
+        }
+
+        public void LeftBatScores()
+        {
+            leftScore++;
+            ResetGame();
+        }
+
+        public void RightBatScores()
+        {
+            rightScore++;
+            ResetGame();
+        }
+
+        SpriteFont spriteFont;
+        
         public Game1()
         {
             Instance = this;
@@ -81,13 +142,35 @@ namespace MistyBats
             spriteBatch = new SpriteBatch(GraphicsDevice);
             background = Content.Load<Texture2D>("Misty");
 
-            leftBat = new LeftBat();
+            // the left bat
+            Vector2 leftStartPos = new Vector2(10, (screenBounds.Height / 2) - 52);
+            leftBat = new Bat(Keys.Q, Keys.A, leftStartPos);
             leftBat.LoadContent();
+            children.Add(leftBat);
 
-            rightBat = new RightBat();
+            Vector2 rightStartPos = new Vector2(screenBounds.Width - 57, (screenBounds.Height / 2) - 52);
+            rightBat = new Bat(Keys.P, Keys.L, rightStartPos);
             rightBat.LoadContent();
-            
+            children.Add(rightBat);
+
+
+            ball = new Ball();
+            ball.LoadContent();
+            children.Add(ball);
+
+            spriteFont = Content.Load<SpriteFont>("SpriteFont1");
+
+            for (int i = 0; i < 10; i++)
+            {
+                barks[i] = Content.Load<SoundEffect>("Bark" + i);
+            }
             // TODO: use this.Content to load your game content here
+        }
+
+        public void Bark()
+        {
+            int which = (int) (new Random().NextDouble() * 9);
+            barks[which].Play();
         }
 
         /// <summary>
@@ -106,13 +189,17 @@ namespace MistyBats
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
-            // Allows the game to exit
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
+            if (Keyboard.GetState().IsKeyDown(Keys.Escape))
+            {
                 this.Exit();
-            leftBat.Update(gameTime);
-            rightBat.Update(gameTime);
-            // TODO: Add your update logic here
+            }
 
+
+            for (int i = 0; i < children.Count; i++)
+            {
+                children[i].Update(gameTime);
+            }
+            
             base.Update(gameTime);
         }
 
@@ -130,8 +217,15 @@ namespace MistyBats
             float scale = (float) screenBounds.Height / (float) background.Bounds.Height;
             //spriteBatch.Draw(background, Vector2.Zero, null, Color.White, 0, Vector2.Zero, scale , SpriteEffects.None, 0);
             spriteBatch.Draw(background, screenBounds, background.Bounds, Color.White);
-            leftBat.Draw(gameTime);
-            rightBat.Draw(gameTime);
+            for (int i = 0; i < children.Count; i++)
+            {
+                children[i].Draw(gameTime);
+            }
+
+
+            int midX = screenBounds.Width / 2;
+            spriteBatch.DrawString(spriteFont, "" + leftScore, new Vector2(midX - 100, 20), Color.Red);
+            spriteBatch.DrawString(spriteFont, "" + rightScore, new Vector2(midX + 100, 20), Color.Red);
 
             spriteBatch.End();
 
