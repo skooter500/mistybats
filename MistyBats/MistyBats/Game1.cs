@@ -8,7 +8,9 @@ using Microsoft.Xna.Framework.GamerServices;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
-
+#if __MonoCS__
+using Microsoft.Xna.Framework.Input.Touch;
+#endif
 namespace MistyBats
 {
     /// <summary>
@@ -142,6 +144,7 @@ namespace MistyBats
             Instance = this;
             graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
+            SoundEffect.MasterVolume = 1.0f;
         }
 
         /// <summary>
@@ -165,8 +168,7 @@ namespace MistyBats
             base.Initialize();
 
             gameState = GAMESTATE.START;
-
-            //graphics.ToggleFullScreen();
+            graphics.ToggleFullScreen();
 
         }
 
@@ -220,7 +222,10 @@ namespace MistyBats
         public void Bark()
         {
             int which = (int) (new Random().NextDouble() * 9);
-            barks[which].Play();
+
+			SoundEffectInstance soundEngineInstance = barks[which].CreateInstance();
+			soundEngineInstance.Volume = 1f;
+			soundEngineInstance.Play();
         }
 
         public void ResetMouse()
@@ -244,10 +249,26 @@ namespace MistyBats
         /// checking for collisions, gathering input, and playing audio.
         /// </summary>
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
-        protected override void Update(GameTime gameTime)
-        {
-            KeyboardState keyState = Keyboard.GetState();
-            MouseState mouseState = Mouse.GetState();
+        protected override void Update (GameTime gameTime)
+		{
+			KeyboardState keyState = Keyboard.GetState ();
+			MouseState mouseState = Mouse.GetState ();
+			Vector2 touchPos = new Vector2 (mouseState.X, mouseState.Y);
+            bool touched = false;
+#if __MonoCS__
+			TouchCollection touchCollection = TouchPanel.GetState ();
+			
+			if (touchCollection.Count > 0) {
+				touchPos.X = touchCollection [0].Position.X;
+				touchPos.Y = touchCollection [0].Position.Y;
+				touched = true;
+			}
+#endif
+
+			if (mouseState.LeftButton == ButtonState.Pressed) {
+				touched = true;
+			}
+
             switch (gameState)
             {
                 case GAMESTATE.START:
@@ -261,14 +282,14 @@ namespace MistyBats
                         Vector2 pos = new Vector2(50, startAt + ((textSize.Y + border) * i));
                         Rectangle textBounds = new Rectangle((int)pos.X, (int)pos.Y, (int)textSize.X, (int) textSize.Y);
                         Vector2 mousePos = new Vector2(mouseState.X, mouseState.Y);
-                        if ((mousePos.X > textBounds.X) && (mousePos.X < textBounds.X + textBounds.Width)
-                            && (mousePos.Y > textBounds.Y) && (mousePos.Y < textBounds.Y + textBounds.Height))
+                        if ((touchPos.X > textBounds.X) && (touchPos.X < textBounds.X + textBounds.Width)
+                            && (touchPos.Y > textBounds.Y) && (touchPos.Y < textBounds.Y + textBounds.Height))
                         {
                             highlighted = i;
                         }
                     }
 
-                    if (mouseState.LeftButton == ButtonState.Pressed)
+                    if (touched)
                     {
                         if (highlighted == 0)
                         {
@@ -304,7 +325,7 @@ namespace MistyBats
                 }
                 case GAMESTATE.END:
                 {
-                    if (mouseState.LeftButton == ButtonState.Pressed)
+                    if (touched)
                     {
                         gameState = GAMESTATE.START;
                     }
@@ -335,7 +356,8 @@ namespace MistyBats
             {
                 case GAMESTATE.START:
                 {
-                    spriteBatch.Draw(startBackground, screenBounds, startBackground.Bounds, Color.White);
+					float scale = (float) screenBounds.Width / (float)  startBackground.Bounds.Width;
+					spriteBatch.Draw(startBackground, Vector2.Zero, null, Color.White, 0, Vector2.Zero, new Vector2(scale, scale), SpriteEffects.None, 0);
                     Vector2 textSize = spriteFont.MeasureString("Hello");
                     int startAt = 200;
                     int border = 20;

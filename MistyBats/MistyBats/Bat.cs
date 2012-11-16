@@ -8,7 +8,9 @@ using Microsoft.Xna.Framework.GamerServices;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Media;
-
+#if __MonoCS__
+using Microsoft.Xna.Framework.Input.Touch;
+#endif
 namespace MistyBats
 {
     public class Bat:GameEntity
@@ -50,19 +52,39 @@ namespace MistyBats
             float timeDelta = (float)gameTime.ElapsedGameTime.TotalSeconds;
             KeyboardState keyState = Keyboard.GetState();
             MouseState mouseState = Mouse.GetState();
+            Vector2 touchPos = new Vector2(mouseState.X, mouseState.Y);
+			bool touched = false;
+#if __MonoCS__
+			TouchCollection touchCollection = TouchPanel.GetState ();
+			
+			if (touchCollection.Count > 0) {
+				touchPos.X = touchCollection [0].Position.X;
+				touchPos.Y = touchCollection [0].Position.Y;
+				touched = true;
+			}
+#endif
             
 
+			
             float bottom = (Game1.Instance.ScreenBounds.Height - Sprite.Height) - 10;
             if (aiControlled)
             {
                 Velocity.Y = Game1.Instance.Ball.Position.Y - Position.Y;
-                Velocity.Y *= 50;
+                Velocity.Y *= 20;
             }
             else if (mouseControlled)
             {
-                Velocity.Y = mouseState.Y - (Game1.Instance.ScreenBounds.Height / 2);
-                Velocity.Y *= 50;
-                Game1.Instance.ResetMouse();
+				if (touched)
+				{
+					Velocity.Y = touchPos.Y - Position.Y;
+					Velocity.Y *= 50;
+				}
+				else
+				{
+					Velocity.Y = touchPos.Y - (Game1.Instance.ScreenBounds.Height / 2);
+	                Velocity.Y *= 50;
+	                Game1.Instance.ResetMouse();
+				}
             }
             else
             {

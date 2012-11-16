@@ -14,13 +14,12 @@ namespace MistyBats
 {
     public class Ball:GameEntity
     {
-        float maxVelocity = 1000;
+        float maxVelocity = 1000.0f;
         public void Reset()
         {
             float speed = 200.0f;
             Random r = new Random(DateTime.Now.Millisecond);
-
-            
+   
             Velocity.Y = (float)r.NextDouble() - 0.5f;
             Velocity.X = r.Next() % 2 == 0 ? -1 : 1;
             Velocity *= speed;
